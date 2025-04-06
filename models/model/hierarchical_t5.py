@@ -37,19 +37,11 @@ class HierarchicalT5(PreTrainedModel):
         t5_config = T5Config.from_pretrained(
             pretrained_model_name_or_path=config.model_name,
             dropout_rate=config.drop_prob,
-            # num_layers=config.encoder_layers,
-            # num_decoder_layers=config.decoder_layers,
         )
         self.t5 = T5ForConditionalGeneration.from_pretrained(
             pretrained_model_name_or_path=config.model_name,
             config=t5_config,
         )
-
-        # Ensure the encoder and decoder have compatible hidden sizes
-        if (self.custom_embed.config.dim * 2) != self.t5.config.d_model:
-            raise ValueError(
-                f"HierarchicalEmbedding d_model {encoder_config.dim}*2 does not match decoder d_model {decoder.config.d_model}."
-            )
 
         # Example usage before load_state_dict
         prefix_map = {

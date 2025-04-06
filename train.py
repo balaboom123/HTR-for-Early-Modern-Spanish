@@ -8,6 +8,7 @@ import numpy as np
 import os
 
 from data import *
+from conf import *
 from models.model.hierarchical_t5 import HierarchicalT5
 from models.model.hierarchical_t5_config import HierarchicalT5Config
 from utils.epoch_timer import epoch_time
@@ -42,6 +43,9 @@ with open("result/parameters.txt", "w") as f:
 # load device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# set VRAM threshold
+torch.cuda.set_per_process_memory_fraction(0.95)
+
 if load_pretrained:
     model_config = HierarchicalT5Config.from_pretrained(pretrained_path)
     model_config.pretrained_path = pretrained_path
@@ -61,8 +65,6 @@ else:
         dec_voc_size=dec_voc_size,
         pretrained_path=None,
         model_name=model_name,
-        encoder_layers=encoder_layers,
-        decoder_layers=decoder_layers,
     )
 
     model = HierarchicalT5(config=model_config)
@@ -76,14 +78,7 @@ print(f"The model has {total_params:,} total parameters")
 print(f"The model has {trainable_params:,} trainable parameters")
 model.cuda()
 
-optimizer = Adafactor(
-    model.parameters(),
-    lr=init_lr,
-    weight_decay=weight_decay,
-    scale_parameter=True,  # Auto-adjusts learning rate
-    relative_step=False,  # Uses step-based learning rate scheduling
-    # warmup_init=True       # Helps stabilize early training
-)
+optimizer = optim.AdamW(model.parameters(), lr=init_lr, betas=betas, weight_decay=weight_decay)
 
 linear_scheduler = optim.lr_scheduler.LinearLR(
     optimizer, start_factor=0.1, total_iters=warmup
@@ -208,11 +203,14 @@ def evaluate(model, iterator, tokenizer, beam_size=5):
 
             try:
                 for pred, ref in zip(output_words, trg_words):
-                    pred_words = pred.strip("▁").split("▁")
-                    ref_words = ref.strip("▁").split("▁")
+                    print(f"Predicted: {pred}\nTarget: {ref}")
+                    pred_words = pred.strip(" ").split(" ")
+                    ref_words = ref.strip(" ").split(" ")
+                    print(f"Predicted words: {pred_words}\nTarget words: {ref_words}")
                     correct = sum(p == r for p, r in zip(pred_words, ref_words))
                     total_correct_words += correct
                     total_words += len(ref_words)
+                    print("correct:", correct, "total:", len(ref_words))
 
             except Exception as e:
                 print(f"Error calculating Word Accuracy for batch {i}, item {e}")
@@ -232,7 +230,6 @@ def evaluate(model, iterator, tokenizer, beam_size=5):
 
 
 def run(total_epoch, model, best_loss=float(1e6)):
-    loss_bleus = []
     for step in range(total_epoch):
         step += 1
         start_time = time.time()
@@ -240,11 +237,9 @@ def run(total_epoch, model, best_loss=float(1e6)):
 
         if step % 10 == 0:
             val_loss, acc = evaluate(model, test_iter, tokenizer, beam_size=5)
-            loss_bleus.append(f"{step},{train_loss},{val_loss},{acc}")
 
-            f = open("result/loss_bleus.txt", "w")
-            f.write(str(loss_bleus))
-            f.close()
+            with open("result/loss_bleus.txt", "a") as f:
+                f.write(f"{step},{train_loss},{val_loss},{acc}\n")
 
         else:
             val_loss, acc = evaluate(model, test_iter, tokenizer, beam_size=0)
@@ -258,14 +253,8 @@ def run(total_epoch, model, best_loss=float(1e6)):
 
             save_best_models(model, val_loss, step, save_dir="./result", max_models=1)
 
-            test_result = f"""Epoch: {step}
-            Train Loss: {train_loss:.3f} | Test Loss: {test_loss:.3f}
-            Word Accuracy: {acc:.4f}
-            """
-
-            f = open(f"result/step_{step}_result.txt", "w")
-            f.write(f"Test Result\n{test_result}")
-            f.close()
+            with open("result/best_results.txt", "a") as f:
+                f.write(f"{step},{train_loss:.3f},{test_loss:.3f},{acc:.4f}")
 
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)

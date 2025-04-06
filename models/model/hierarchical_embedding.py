@@ -5,7 +5,6 @@ from transformers.modeling_outputs import BaseModelOutput
 
 from models.blocks.encoder_layer import EncoderLayer
 from models.embedding.patch_embeddings import PatchEmbedding
-from models.layers.patch_merging import PatchMerging
 from models.model.hierarchical_embedding_config import HierarchicalEmbeddingConfig
 
 
@@ -43,19 +42,6 @@ class HierarchicalEmbedding(PreTrainedModel):
             drop_prob=config.drop_prob,
         )
 
-        self.layers1 = nn.ModuleList(
-            [
-                EncoderLayer(
-                    dim=config.dim,
-                    ffn_hidden_ratio=config.ffn_hidden_ratio,
-                    n_head=config.n_heads,
-                    drop_prob=config.drop_prob,
-                )
-                for _ in range(config.vit_block)
-            ]
-        )
-        self.patch_merge1 = PatchMerging(dim=config.dim)
-
 
     def forward(
         self,
@@ -73,10 +59,5 @@ class HierarchicalEmbedding(PreTrainedModel):
             BaseModelOutput: Contains the last hidden state and optionally attentions.
         """
         x = self.emb(input_ids)
-
-        # Pass through first set of encoder layers
-        for layer in self.layers1:
-            x = layer(x)
-        x = self.patch_merge1(x)
 
         return x

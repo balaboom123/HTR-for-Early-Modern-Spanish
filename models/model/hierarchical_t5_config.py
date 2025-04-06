@@ -21,8 +21,6 @@ class HierarchicalT5Config(PretrainedConfig):
         pretrained_path=None,
         dec_voc_size=7000,
         model_name="t5-small",
-        encoder_layers=6,
-        decoder_layers=6,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -40,8 +38,6 @@ class HierarchicalT5Config(PretrainedConfig):
         self.pretrained_path = pretrained_path
         self.dec_voc_size = dec_voc_size
         self.model_name = model_name
-        self.encoder_layers = encoder_layers
-        self.decoder_layers = decoder_layers
 
     def to_dict(self):
         config_dict = super().to_dict()
@@ -60,8 +56,6 @@ class HierarchicalT5Config(PretrainedConfig):
                 "pretrained_path": self.pretrained_path,
                 "dec_voc_size": self.dec_voc_size,
                 "model_name": self.model_name,
-                "encoder_layers": self.encoder_layers,
-                "decoder_layers": self.decoder_layers,
             }
         )
         return config_dict

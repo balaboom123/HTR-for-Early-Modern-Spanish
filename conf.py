@@ -6,26 +6,24 @@ tokenizer_type = "hf"
 # model parameter setting
 # input shape -> (batch_size, channels, height, width)
 batch_size = 16
-image_size = (768, 48)  # height, width
-image_patch_size = (24, 24)
+image_size = (48, 192)  # height, width
+image_patch_size = (16, 16)
 channels = 1
-dim = 256  # half of the dimension of the t5
+dim = 512
 vit_block = 4
 model_name = "google/t5-v1_1-small" #
-encoder_layers = 6  # deprecated
-decoder_layers = 6  # deprecated
-n_heads = 4  # half of the n_heads of the t5
+n_heads = 4  # deprecated
 ffn_hidden_ratio = 4
 drop_prob = 0.2
-max_output = 32
+max_output = 16
 
 # optimizer parameter setting
 init_lr = 1e-3
-betas = (0.9, 0.95)
+betas = (0.9, 0.999)
 warmup = 10
 epoch = 100
 clip = 1.0
-weight_decay = 1e-1
+weight_decay = 1e-4
 inf = float("inf")
 
 # loss
@@ -52,8 +50,6 @@ image_patch_size = {image_patch_size}
 max_frames = {channels}
 dim = {dim}
 model_name = {model_name}
-encoder_layers = {encoder_layers}
-decoder_layers = {decoder_layers}
 n_heads = {n_heads}
 ffn_hidden_ratio = {ffn_hidden_ratio}
 drop_prob = {drop_prob}

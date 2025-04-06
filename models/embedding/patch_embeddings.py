@@ -25,8 +25,8 @@ class PatchEmbedding(nn.Module):
 
     def __init__(
         self,
-        image_size=(48, 768),
-        image_patch_size=(24, 24),
+        image_size=(48, 192),
+        image_patch_size=(16, 16),
         dim=256,
         channels=1,
         drop_prob=0.1,
