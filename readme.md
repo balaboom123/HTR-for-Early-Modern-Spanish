@@ -11,6 +11,12 @@ The wordlist comes from the [OpenSLR Spanish Word list](https://openslr.org/21/)
 The dataset class in `utils/OcrDataset.py` is designed for loading data generated from SynthTIGER.
 To train with default dataset, you may get the data from [SynthTIGER](https://github.com/clovaai/synthtiger) or you should make a custom dataset class.
 
+## Train
+constructing...
+
+## Test
+constructing...
+
 ## Experiment
 ### Result
 | Metric        | Value |
