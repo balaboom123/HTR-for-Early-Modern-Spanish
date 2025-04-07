@@ -1,4 +1,9 @@
-numpy >= 1.26.4
-torch >= 2.2.1
-transformers
-pandas
+numpy == 1.26.4
+torch == 2.5.1
+torchaudio == 2.5.1
+torchvision == 0.20.1
+transformers == 4.44.1
+pandas == 2.2.2
+einops == 0.8.0
+typing_extensions == 4.12.2
+pillow == 10.4.0

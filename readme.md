@@ -12,18 +12,23 @@ The dataset class in `utils/OcrDataset.py` is designed for loading data generate
 To train with default dataset, you may get the data from [SynthTIGER](https://github.com/clovaai/synthtiger) or you should make a custom dataset class.
 
 ## Train
+please set up the hyperparameters for model in `conf.py` then use `train.py`
+
 constructing...
 
 ## Test
+download the weights from [Google Drive](https://drive.google.com/drive/folders/1pEAr8v9swyyCxX8qleVAV3FQV1jEMdZx?usp=sharing).
+Then, please make sure the **pretrained_path** in `conf.py` is match to the folder path and use `test.py`
+
 constructing...
 
 ## Experiment
 ### Result
 | Metric        | Value |
 |---------------|-------|
-| Train Loss    | 4.30  |
-| Test Loss     | 6.62  |
-| Word Accuracy | 32.3% |
+| Train Loss    | 1.95  |
+| Test Loss     | 6.97  |
+| Word Accuracy | 56.2% |
 
 ### Model Specification
  - total parameters = 60,573,824 parameters

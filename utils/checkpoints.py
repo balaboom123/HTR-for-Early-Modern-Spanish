@@ -5,7 +5,7 @@ import torch
 best_models = []
 
 
-def save_best_models(model, loss, step, save_dir="result", max_models=3):
+def save_best_models(model, acc, step, save_dir="result", max_models=3):
     """Saves and maintains top N models based on BLEU scores.
 
     Args:
@@ -21,14 +21,14 @@ def save_best_models(model, loss, step, save_dir="result", max_models=3):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    model_filename = f"model-{step}-{loss:.4f}"
+    model_filename = f"model-{step}-{acc:.4f}"
     model_path = os.path.join(save_dir, model_filename)
 
     model.save_pretrained(model_path, config=model.config)
 
-    best_models.append((model_filename, loss))
+    best_models.append((model_filename, acc))
     best_models = sorted(
-        best_models, key=lambda x: x[1], reverse=True
+        best_models, key=lambda x: x[1], reverse=False
     )  # Sort by bleu in descending order
 
     if len(best_models) > max_models:
@@ -39,21 +39,3 @@ def save_best_models(model, loss, step, save_dir="result", max_models=3):
                 shutil.rmtree(worst_model_path)  # Remove folder and its contents
             else:
                 os.remove(worst_model_path)  # Remove file
-
-
-def get_best_models(save_dir="result"):
-    """Returns path of best performing model.
-
-    Args:
-        save_dir: Models directory. Default: "result"
-
-    Returns:
-        str: Path to best model
-    """
-    global best_models
-
-    best_models = sorted(
-        best_models, key=lambda x: x[1], reverse=True
-    )  # Sort by bleu in descending order
-    best_model_path = os.path.join(save_dir, best_models[-1][0])
-    return best_model_path

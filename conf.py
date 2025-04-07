@@ -1,17 +1,16 @@
 # load pre-trained model or not
 load_pretrained = False
-pretrained_path = "result/save/model-62-7.5961"
-tokenizer_type = "hf"
+pretrained_path = "result/best"
 
 # model parameter setting
 # input shape -> (batch_size, channels, height, width)
 batch_size = 16
-image_size = (48, 192)  # height, width
-image_patch_size = (16, 16)
+image_size = (32, 128)  # height, width
+image_patch_size = (8, 8)
 channels = 1
 dim = 512
 vit_block = 4
-model_name = "google/t5-v1_1-small" #
+model_name = "t5-small"
 n_heads = 4  # deprecated
 ffn_hidden_ratio = 4
 drop_prob = 0.2
@@ -26,7 +25,7 @@ clip = 1.0
 weight_decay = 1e-4
 inf = float("inf")
 
-# loss
+# acc
 label_smoothing = 0.2
 
 # lr_scheduler
@@ -35,7 +34,7 @@ end_lr = 1e-5
 
 # file path setting
 train_dir = "data/cc100"
-test_dir = "data/source"
+test_dir = "data/source_vocab"
 
 # Prepare the information as a formatted string
 info = f"""

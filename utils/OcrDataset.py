@@ -7,7 +7,6 @@ import torch
 from torch.utils.data import Dataset
 from functools import lru_cache
 from transformers import PreTrainedTokenizer
-from sentencepiece import SentencePieceProcessor
 from PIL import Image, ImageOps
 
 
@@ -17,8 +16,7 @@ class OcrDataset(Dataset):
         files_dir: str,
         image_size: Tuple[int, int],
         max_output: int,
-        tokenizer: Union[PreTrainedTokenizer, SentencePieceProcessor],
-        tokenizer_type: str = "hf",
+        tokenizer: PreTrainedTokenizer,
         use_cache: bool = False,
     ) -> None:
 
@@ -32,13 +30,7 @@ class OcrDataset(Dataset):
         self.csv_file = self.find_files(files_dir, pattern="**/*.csv")[0]
         self.sentence_dict = self.load_labels()
         self.tokenizer = tokenizer
-        self.tokenizer_type = tokenizer_type
-
-        # Set tokenizer type and pad_id
-        if self.tokenizer_type == "hf":
-            self.pad_id = tokenizer.pad_token_id
-        elif self.tokenizer_type == "sp":
-            self.pad_id = tokenizer.piece_to_id("<pad>")
+        self.pad_id = tokenizer.pad_token_id
 
         # Pre-tokenize all labels once
         for img_file in self.img_files:
@@ -63,29 +55,16 @@ class OcrDataset(Dataset):
         else:
             sentence = str(sentence)
 
-        if self.tokenizer_type == "hf":
-            encoding = self.tokenizer(
-                sentence,
-                padding="max_length",
-                max_length=self.max_output_length,
-                truncation=True,
-                return_tensors="pt",
-                return_attention_mask=False,
-            )
+        encoding = self.tokenizer(
+            sentence,
+            padding="max_length",
+            max_length=self.max_output_length,
+            truncation=True,
+            return_tensors="pt",
+            return_attention_mask=False,
+        )
 
-            return encoding["input_ids"].squeeze()
-
-        elif self.tokenizer_type == "sp":
-            sentence = sentence.lower()
-            token_ids = self.tokenizer.encode(sentence, out_type=int) + [
-                self.tokenizer.piece_to_id("</s>")
-            ]
-            token_ids = np.array(token_ids)
-            label_tensor = np.full(self.max_output_length, self.pad_id, dtype=np.int64)
-            length = min(len(token_ids), self.max_output_length)
-            label_tensor[:length] = token_ids[:length]
-
-            return torch.tensor(label_tensor, dtype=torch.long)
+        return encoding["input_ids"].squeeze()
 
     def resize_with_padding(self, image: Image.Image) -> Image.Image:
         """
@@ -129,11 +108,9 @@ class OcrDataset(Dataset):
         """
         image = Image.open(image_path).convert("L")
         image = self.resize_with_padding(image)
-        image_array = np.array(image)  # Shape: (H, W)
+        image_array = np.array(image)
 
-        return torch.tensor(image_array, dtype=torch.float32).unsqueeze(
-            0
-        )  # Shape: (C, H, W)
+        return torch.tensor(image_array, dtype=torch.float32).unsqueeze(0)
 
     def load_labels(self) -> Dict[str, str]:
         data_frame = pd.read_csv(self.csv_file, delimiter=",", on_bad_lines="skip")

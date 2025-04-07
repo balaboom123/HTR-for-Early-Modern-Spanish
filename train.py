@@ -1,4 +1,3 @@
-import math
 import time
 import torch
 from torch import nn, optim
@@ -12,7 +11,7 @@ from conf import *
 from models.model.hierarchical_t5 import HierarchicalT5
 from models.model.hierarchical_t5_config import HierarchicalT5Config
 from utils.epoch_timer import epoch_time
-from utils.checkpoints import save_best_models, get_best_models
+from utils.checkpoints import save_best_models
 
 
 def count_parameters(model):
@@ -70,8 +69,8 @@ else:
     model = HierarchicalT5(config=model_config)
     model.custom_embed.apply(initialize_weights)
 
-    for param in model.t5.parameters():
-        param.requires_grad = False
+    # for param in model.t5.parameters():
+    #     param.requires_grad = False
 
 trainable_params, total_params = count_parameters(model)
 print(f"The model has {total_params:,} total parameters")
@@ -97,8 +96,6 @@ criterion = nn.CrossEntropyLoss(
 def train(model, iterator, optimizer, criterion, clip):
     model.train()
     epoch_loss = 0
-    scaler = GradScaler()
-
     forward_pass_time, backprop_time, update_time = [], [], []
 
     for i, (x, y) in enumerate(iterator):
@@ -108,28 +105,24 @@ def train(model, iterator, optimizer, criterion, clip):
         optimizer.zero_grad()
 
         start_time = time.time()
-        with autocast(device_type="cuda", enabled=False):
-            output = model(input_ids=src, labels=trg)
-            # output_logits = output.logits.to(torch.float32)
-            loss = output.loss
-            # loss = criterion(
-            #     output_logits.view(-1, output_logits.size(-1)),
-            #     trg.contiguous().view(-1),
-            # )
-            # print(output.logits.max(dim=2)[1][0])
-            # print(trg[0])
+        output = model(input_ids=src, labels=trg)
+        output_logits = output.logits.to(torch.float32)
+        loss = criterion(
+            output_logits.view(-1, output_logits.size(-1)),
+            trg.contiguous().view(-1),
+        )
+        # print(output.logits.max(dim=2)[1][0])
+        # print(trg[0])
 
         forward_pass_time.append(time.time() - start_time)
 
         start_time = time.time()
-        scaler.scale(loss).backward()
+        loss.backward()
         backprop_time.append(time.time() - start_time)
 
         start_time = time.time()
-        scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
-        scaler.step(optimizer)
-        scaler.update()
+        optimizer.step()
         update_time.append(time.time() - start_time)
 
         epoch_loss += loss.item()
@@ -156,7 +149,7 @@ def evaluate(model, iterator, tokenizer, beam_size=5):
         sp (SentencePieceProcessor): SentencePiece tokenizer.
 
     Returns:
-        tuple: Contains average loss, BLEU-1, BLEU-2, BLEU-3, BLEU, ROUGE-L, and BLEURT scores.
+        tuple: Contains average acc, BLEU-1, BLEU-2, BLEU-3, BLEU, ROUGE-L, and BLEURT scores.
     """
     model.eval()
 
@@ -173,44 +166,26 @@ def evaluate(model, iterator, tokenizer, beam_size=5):
             total_loss.append(loss.item())
 
             # Generate output sequences if beam size > 0
-            # otherwise, process loss only
+            # otherwise, process acc only
             if beam_size != 0:
                 output = model.generate(input_ids=src, beam_size=beam_size)
             else:
                 continue
 
-            if tokenizer_type == "hf":
-                # Convert target indices to words using HuggingFace tokenizer
-                trg_words = tokenizer.batch_decode(y, skip_special_tokens=True)
-                # Convert output indices to words
-                output_words = tokenizer.batch_decode(
-                    output.sequences, skip_special_tokens=True
-                )
-
-            # temporally deprecated
-            elif tokenizer_type == "sp":
-                # Convert target indices to words using SentencePiece
-                trg_words = [tokenizer.decode_ids(ids) for ids in y.tolist()]
-                # Convert output indices to words
-                output_words = [
-                    tokenizer.decode_ids(ids) for ids in output.sequences.tolist()
-                ]
-
-            else:
-                raise ValueError(
-                    f"Invalid tokenizer type: {tokenizer_type}, must be 'hf' or 'sp'"
-                )
+            # Convert target indices to words using HuggingFace tokenizer
+            trg_words = tokenizer.batch_decode(y, skip_special_tokens=True)
+            # Convert output indices to words
+            output_words = tokenizer.batch_decode(
+                output.sequences, skip_special_tokens=True
+            )
 
             try:
                 for pred, ref in zip(output_words, trg_words):
-                    print(f"Predicted: {pred}\nTarget: {ref}")
                     pred_words = pred.strip(" ").split(" ")
                     ref_words = ref.strip(" ").split(" ")
-                    print(f"Predicted words: {pred_words}\nTarget words: {ref_words}")
                     correct = sum(p == r for p, r in zip(pred_words, ref_words))
                     total_correct_words += correct
                     total_words += len(ref_words)
-                    print("correct:", correct, "total:", len(ref_words))
 
             except Exception as e:
                 print(f"Error calculating Word Accuracy for batch {i}, item {e}")
@@ -229,32 +204,32 @@ def evaluate(model, iterator, tokenizer, beam_size=5):
     return avg_loss, word_accuracy
 
 
-def run(total_epoch, model, best_loss=float(1e6)):
+def run(total_epoch, model, best_acc=0.):
     for step in range(total_epoch):
         step += 1
         start_time = time.time()
         train_loss = train(model, train_iter, optimizer, criterion, clip)
 
         if step % 10 == 0:
-            val_loss, acc = evaluate(model, test_iter, tokenizer, beam_size=5)
+            val_loss, val_acc = evaluate(model, test_iter, tokenizer, beam_size=5)
 
             with open("result/loss_bleus.txt", "a") as f:
-                f.write(f"{step},{train_loss},{val_loss},{acc}\n")
+                f.write(f"{step},{train_loss},{val_loss},{val_acc}\n")
 
         else:
-            val_loss, acc = evaluate(model, test_iter, tokenizer, beam_size=0)
+            val_loss, val_acc = evaluate(model, test_iter, tokenizer, beam_size=0)
 
-        if (val_loss < best_loss) and (step > epoch // 3):
-            best_loss = val_loss
+        if (val_acc < best_acc) and (step > epoch // 3):
+            best_acc = val_acc
 
-            test_loss, bleu_1, bleu_2, bleu_3, bleu, rough_L, bleurt_score = evaluate(
+            test_loss, test_acc = evaluate(
                 model, test_iter, tokenizer, beam_size=5
             )
 
-            save_best_models(model, val_loss, step, save_dir="./result", max_models=1)
+            save_best_models(model, test_acc, step, save_dir="./result", max_models=3)
 
             with open("result/best_results.txt", "a") as f:
-                f.write(f"{step},{train_loss:.3f},{test_loss:.3f},{acc:.4f}")
+                f.write(f"{step},{train_loss:.3f},{test_loss:.3f},{test_acc:.4f}")
 
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
@@ -263,8 +238,8 @@ def run(total_epoch, model, best_loss=float(1e6)):
 
         print(f"Epoch: {step} | Time: {epoch_mins}m {epoch_secs}s")
         print(f"\tTrain Loss: {train_loss:.3f} | Valid Loss: {val_loss:.3f}")
-        print(f"\tWord Accuracy: {acc:.4f}")
+        print(f"\tWord Accuracy: {val_acc:.4f}")
 
 
 if __name__ == "__main__":
-    run(total_epoch=epoch, model=model, best_loss=float("inf"))
+    run(total_epoch=epoch, model=model, best_acc=0.)
