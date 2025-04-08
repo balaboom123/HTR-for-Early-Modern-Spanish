@@ -39,6 +39,9 @@ if not os.path.exists("result"):
 with open("result/parameters.txt", "w") as f:
     f.write(str(info))
 
+# set VRAM threshold
+torch.cuda.set_per_process_memory_fraction(0.95)
+
 # load device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -219,7 +222,7 @@ def run(total_epoch, model, best_acc=0.):
         else:
             val_loss, val_acc = evaluate(model, test_iter, tokenizer, beam_size=0)
 
-        if (val_acc < best_acc) and (step > epoch // 3):
+        if (val_acc > best_acc) and (step > epoch // 3):
             best_acc = val_acc
 
             test_loss, test_acc = evaluate(

@@ -34,7 +34,7 @@ end_lr = 1e-5
 
 # file path setting
 train_dir = "data/cc100"
-test_dir = "data/source_vocab"
+test_dir = "data_example/test"
 
 # Prepare the information as a formatted string
 info = f"""

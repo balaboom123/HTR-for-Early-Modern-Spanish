@@ -17,18 +17,18 @@ please set up the hyperparameters for model in `conf.py` then use `train.py`
 constructing...
 
 ## Test
-download the weights from [Google Drive](https://drive.google.com/drive/folders/1pEAr8v9swyyCxX8qleVAV3FQV1jEMdZx?usp=sharing).
-Then, please make sure the **pretrained_path** in `conf.py` is match to the folder path and use `test.py`
-
-constructing...
+1. download the weights from [Google Drive](https://drive.google.com/drive/folders/1pEAr8v9swyyCxX8qleVAV3FQV1jEMdZx?usp=sharing). 
+2. make sure the **pretrained_path** in `conf.py` is match to the folder path.
+3. make sure the **test_dir** in `conf.py` is set to the folder where the test data are stored. default is the test data i used in the result.
+4. run `test.py`
 
 ## Experiment
 ### Result
-| Metric        | Value |
-|---------------|-------|
-| Train Loss    | 1.95  |
-| Test Loss     | 6.97  |
-| Word Accuracy | 56.2% |
+| Metric        | Value  |
+|---------------|--------|
+| Train Loss    | 1.91   |
+| Test Loss     | 6.90   |
+| Word Accuracy | 67.05% |
 
 ### Model Specification
  - total parameters = 60,573,824 parameters
@@ -48,11 +48,11 @@ constructing...
  - end_lr = 1e-7
  - betas = (0.9, 0.999)
  - warmup = 5
- - epoch = 100
+ - epoch = 50
  - clip = 1.0
  - weight_decay = 0
- - drop_prob = 0.2
- - label_smoothing = 0.2
+ - drop_prob = 0.1
+ - label_smoothing = 0.1
 
 
 ## License
